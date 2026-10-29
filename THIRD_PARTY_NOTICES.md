@@ -23,3 +23,5 @@ SOFTWARE.
 Partes da integração Keycloak e do schema de autenticação foram adaptadas de https://github.com/Prefeitura-de-Pindamonhangaba/Pindamonhangaba.DadosPinda (licença acima).
 
 A paleta institucional (tokens.css), o brasão e elementos da identidade visual foram adaptados do DadosPinda, sob a licença acima.
+
+O provisionamento de identidades Keycloak, a revalidação de sessões e os testes OIDC assinados também foram adaptados do DadosPinda.
