@@ -1,0 +1,20 @@
+services:
+  app:
+    networks:
+      frontend:
+        aliases: [dsi-panel.test]
+      backend: {}
+  browser-tests:
+    profiles: [browser-tests]
+    build:
+      context: .
+      target: browser-tests
+    environment:
+      E2E_BASE_URL: http://dsi-panel.test:3000
+      E2E_AUTH_BYPASS_ENABLED: ${AUTH_BYPASS_ENABLED:-false}
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./test-results:/app/test-results
+    networks: [frontend]

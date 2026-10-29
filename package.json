@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun --bun next dev --hostname 127.0.0.1",
     "build": "bun --bun next build --webpack",
-    "start": "bun --bun next start --hostname 0.0.0.0",
+    "start": "bun scripts/validate-environment.ts && bun --bun next start --hostname 0.0.0.0",
     "lint": "bun --bun eslint .",
     "typecheck": "bun --bun tsc --noEmit",
     "test": "bun test",
@@ -14,14 +14,20 @@
     "format:check": "bun --bun prettier --check .",
     "db:generate": "bunx --bun drizzle-kit generate",
     "db:migrate": "bunx --bun drizzle-kit migrate",
-    "test:e2e": "bunx --bun playwright test"
+    "test:e2e": "bunx --bun playwright test",
+    "auth:provision": "bun scripts/provision-user.ts",
+    "sync:contracts": "bun scripts/sync-contracts.ts",
+    "sync:glpi": "bun scripts/sync-glpi.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.12",
+    "better-auth": "1.7.12",
+    "drizzle-orm": "0.45.4",
     "next": "16.4.2",
+    "postgres": "3.4.9",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "drizzle-orm": "0.45.4",
-    "postgres": "3.4.9",
+    "server-only": "0.0.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -36,5 +42,3 @@
     "@playwright/test": "1.64.1"
   }
 }
-
-

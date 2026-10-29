@@ -3,10 +3,21 @@ services:
     build: .
     ports:
       - "127.0.0.1:3000:3000"
-    environment:
+    environment: &app-environment
       NODE_ENV: production
       APP_URL: ${APP_URL:?Defina APP_URL}
       DATABASE_URL: postgresql://${POSTGRES_USER:?Defina POSTGRES_USER}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:?Defina POSTGRES_DB}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      KEYCLOAK_ENABLED: ${KEYCLOAK_ENABLED:-false}
+      AUTH_BYPASS_ENABLED: ${AUTH_BYPASS_ENABLED:-false}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      GLPI_API_URL: ${GLPI_API_URL:-https://glpi.pindamonhangaba.sp.gov.br/apirest.php/}
+      GLPI_APP_TOKEN: ${GLPI_APP_TOKEN:-}
+      GLPI_USER_TOKEN: ${GLPI_USER_TOKEN:-}
+      GLPI_DSI_GROUP_ID: ${GLPI_DSI_GROUP_ID:-}
+      GLPI_TIME_ZONE: ${GLPI_TIME_ZONE:-America/Sao_Paulo}
     depends_on:
       db:
         condition: service_healthy
@@ -23,6 +34,16 @@ services:
       start_period: 30s
       retries: 3
     restart: unless-stopped
+    networks: [frontend, backend]
+  tools:
+    profiles: [tools]
+    build:
+      context: .
+      target: tools
+    environment: *app-environment
+    depends_on:
+      db:
+        condition: service_healthy
     networks: [frontend, backend]
   db:
     image: postgres:17.6-alpine

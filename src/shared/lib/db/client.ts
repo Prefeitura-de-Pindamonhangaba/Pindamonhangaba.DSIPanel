@@ -9,3 +9,9 @@ export function createDatabase() {
   });
   return { db: drizzle(client), close: () => client.end() };
 }
+
+let database: ReturnType<typeof createDatabase> | undefined;
+export function getDatabase() {
+  database ??= createDatabase();
+  return database.db;
+}

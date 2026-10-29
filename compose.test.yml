@@ -1,0 +1,38 @@
+services:
+  db-test:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: ephemeral-test-only
+      POSTGRES_DB: dsi_panel_auth_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d dsi_panel_auth_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    networks: [isolated]
+  auth-tests:
+    build:
+      context: .
+      target: tools
+    entrypoint: ["bun"]
+    command:
+      [
+        "test",
+        "--timeout",
+        "30000",
+        "./tests/integration/keycloak-flow.test.ts",
+        "./tests/integration/integration-storage.test.ts",
+      ]
+    environment:
+      NODE_ENV: test
+      AUTH_TEST_DATABASE_URL: postgresql://test:ephemeral-test-only@db-test:5432/dsi_panel_auth_test
+    depends_on:
+      db-test:
+        condition: service_healthy
+    networks: [isolated]
+networks:
+  isolated:
+    internal: true

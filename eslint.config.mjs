@@ -5,6 +5,8 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   globalIgnores([
+    ".tools/**",
+    "drizzle/**",
     ".next/**",
     "next-env.d.ts",
     "playwright-report/**",

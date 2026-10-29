@@ -10,7 +10,7 @@ Requisitos: Bun 1.4.3 ou superior e Docker com Compose.
 2. Execute `bun install --frozen-lockfile`.
 3. Execute `bun run dev` e acesse http://localhost:3000.
 
-A página inicial não depende de conexão com o banco. Nenhum acesso protegido, usuário ou dado pessoal foi implementado nesta fase. O indicador de ambiente interno é informativo; a restrição de rede é responsabilidade da infraestrutura até a implementação da autenticação.
+O painel exige login institucional via Keycloak e conta local autorizada. Configure as variáveis privadas, aplique as migrações e provisione a primeira conta conforme [autenticação](docs/autenticacao.md). Enquanto o Keycloak estiver desabilitado, a página de login permanece acessível e o painel fica protegido.
 
 ## Qualidade
 
@@ -33,3 +33,6 @@ Para desenvolvimento de repositories no host, é necessário disponibilizar uma 
 
 Veja [a fundação](docs/fundacao.md) para arquitetura, migrações e operação.
 
+## Contratos e GLPI
+
+O painel possui módulos protegidos em `/contracts` e `/tickets`. Consulte [as integrações](docs/integracoes.md) para aplicar migrações, capturar os contratos da secretaria e configurar a conta de leitura do GLPI. Indicadores exibem a última captura disponível; vínculos manuais permanecem no DSI Panel.

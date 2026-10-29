@@ -3,32 +3,34 @@ export function getDashboard(): DashboardData {
   return {
     resources: [
       {
-        title: "Ferramentas do DSI",
+        title: "Chamados do DSI",
         description:
-          "Um ponto de encontro para os recursos que facilitam nossa rotina.",
+          "Acompanhe o grupo DSI no GLPI, os fornecedores e os níveis de serviço.",
         icon: "tools",
-        status: "Aguardando primeira ferramenta",
+        status: "Abrir acompanhamento",
+        href: "/tickets",
       },
       {
-        title: "Base de conhecimento",
+        title: "Contratos e editais",
         description:
-          "Procedimentos e orientações da equipe, reunidos em um só lugar.",
+          "Contratos vigentes da secretaria, instrumentos, aditivos e editais de licitação.",
         icon: "book",
-        status: "Disponível em uma próxima etapa",
+        status: "Consultar contratos",
+        href: "/contracts",
       },
       {
         title: "Gestão de acessos",
         description:
           "Usuários e permissões para um ambiente organizado e seguro.",
         icon: "users",
-        status: "Próxima fase do projeto",
+        status: "Acesso institucional com permissões",
       },
     ],
     milestones: [
       {
         title: "Fundação",
         description: "Estrutura e página inicial",
-        current: true,
+        current: false,
       },
       {
         title: "Identidade e acesso",
@@ -37,8 +39,8 @@ export function getDashboard(): DashboardData {
       },
       {
         title: "Ferramentas",
-        description: "Primeiro módulo do departamento",
-        current: false,
+        description: "Contratos, GLPI e acompanhamento da operação",
+        current: true,
       },
     ],
   };
