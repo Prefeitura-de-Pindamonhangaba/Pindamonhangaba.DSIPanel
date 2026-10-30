@@ -1,7 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuth, getPrincipalService } from "@/shared/lib/auth/server";
+import { getIdentityService } from "@/shared/lib/auth/server";
 import { parseKeycloakEnvironment } from "../services/keycloak-config";
 import { canAccess } from "../services/access-service";
 import type { Permission } from "../models/access-types";
@@ -10,12 +10,11 @@ import {
   isTestAccessEnabled,
 } from "../services/test-access-service";
 
-// As permissões são lidas do banco em cada requisição, sem cache no cookie.
+// O Keycloak é a autoridade dos papéis; o banco mantém apenas o espelho local.
 export async function getPrincipal(requestHeaders: Headers) {
   if (isTestAccessEnabled(process.env)) return getTestPrincipal();
   if (!parseKeycloakEnvironment(process.env).enabled) return null;
-  const session = await getAuth().api.getSession({ headers: requestHeaders });
-  return getPrincipalService().resolve(session?.user.id);
+  return getIdentityService()?.getPrincipal(requestHeaders) ?? null;
 }
 export async function requirePageAccess(
   permission: Permission = "dashboard:read",

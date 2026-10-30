@@ -1,14 +1,22 @@
 # Login institucional
 
-## Decisão
+## Fluxo e autoridade
 
-O DSI Panel segue o fluxo do [DadosPinda](https://github.com/Prefeitura-de-Pindamonhangaba/Pindamonhangaba.DadosPinda): Keycloak é a única forma de login, com Better Auth e adapter Drizzle. A dependência evita implementar sessões, OIDC e criptografia do zero. O SDK valida os tokens por discovery/JWKS e gerencia Authorization Code, state, nonce e PKCE S256. Tokens OAuth persistidos são criptografados com `BETTER_AUTH_SECRET`.
+O DSI Panel replica a autenticação do [Pinda Dados](https://github.com/Prefeitura-de-Pindamonhangaba/Pindamonhangaba.DadosPinda), com Better Auth, PostgreSQL e Drizzle. O Keycloak é a única origem de identidade e dos papéis. O SDK valida assinatura, issuer, audience, state, nonce e PKCE S256; tokens OAuth são criptografados com BETTER_AUTH_SECRET.
 
-A conta local usa UUID estável, com vínculo explícito por par `issuer` + `sub`. Não há associação automática por e-mail, cadastro público, importação de papéis do realm nem login por senha local. A tabela de credenciais mantém os campos exigidos pelo SDK; nenhum fluxo de senha local está habilitado.
+No primeiro login com um papel autorizado do próprio cliente, o painel cria automaticamente o usuário e o vínculo por issuer + sub. O UUID local é estável. Contas existentes com esse vínculo são preservadas. Não há associação por e-mail, senha local, cadastro público ou confiança em papéis de outros clientes ou do realm. O SDK recebe um e-mail técnico determinístico no domínio identity.invalid; e-mail pessoal e e-mail verificado não são requisitos de acesso.
 
-## Configurar
+Papéis em resource_access[KEYCLOAK_CLIENT_ID].roles, em ordem de precedência:
 
-Os campos de autenticação do `.env` foram deixados vazios para configuração da instalação. O `.env.example` documenta:
+| Papel    | Permissões no DSI Panel                                    |
+| -------- | ---------------------------------------------------------- |
+| viewer   | Visualizar início, contratos e chamados                    |
+| operator | Visualizar e gerenciar integrações e vínculos de contratos |
+| admin    | Permissões de operator e users:manage                      |
+
+O banco mantém um espelho dos papéis nas tabelas RBAC existentes. A autorização durante a sessão usa os papéis verificados pelo Keycloak, nunca uma promoção feita apenas no banco. Papéis e nome são atualizados no login e na revalidação. Não é necessária migração estrutural.
+
+## Configuração
 
 ```env
 BETTER_AUTH_SECRET=
@@ -16,107 +24,59 @@ KEYCLOAK_ENABLED=false
 KEYCLOAK_ISSUER=
 KEYCLOAK_CLIENT_ID=
 KEYCLOAK_CLIENT_SECRET=
+AUTH_BYPASS_ENABLED=false
 ```
 
-Gere um segredo aleatório de pelo menos 32 caracteres para `BETTER_AUTH_SECRET` e preserve-o nas atualizações. Use `KEYCLOAK_ISSUER` com a URL HTTPS completa do realm, sem query string ou credenciais. Configure um cliente confidencial exclusivo do painel: client authentication e standard flow habilitados, PKCE S256, scopes `openid profile email`, usuários com e-mail verificado. Não habilite implicit flow ou direct access grants.
+Configure um cliente confidencial exclusivo para o DSI Panel com standard flow, client authentication, PKCE S256 e scopes openid profile. Crie viewer, operator e admin como papéis desse cliente, atribua apenas os necessários e inclua o mapper de client roles no ID token. Não reutilize o client ID do Pinda Dados. Realm roles e papéis de outro cliente não dão acesso.
 
-Registre callback e origem exatos, correspondentes a `APP_URL`:
+BETTER_AUTH_SECRET exige pelo menos 32 caracteres aleatórios e deve ser preservado entre atualizações. KEYCLOAK_ISSUER deve ser a URL HTTPS completa do realm, com certificado confiável no container. A configuração habilitada incompleta impede a inicialização sem revelar segredos.
 
-- Callback local: `http://localhost:3000/api/auth/callback/keycloak`.
-- Web origin local: `http://localhost:3000`.
-- Em produção: a mesma rota na origem HTTPS do painel, sem curingas.
+Registre origens exatas, sem curingas:
 
-`APP_URL` permite HTTP somente em loopback local. O issuer do Keycloak exige HTTPS confiável também no container. Para acesso pela rede, configure origem HTTPS e proxy reverso. Cabeçalhos de autenticação e parâmetros do callback (code/state) não devem ser registrados por proxies externos.
+- Callback local: http://localhost:3000/api/auth/callback/keycloak.
+- Web origin local: http://localhost:3000.
+- Produção: a mesma rota sob a origem HTTPS definida em APP_URL.
 
-Com `KEYCLOAK_ENABLED=false`, `/login` mostra o botão indisponível e `/` redireciona para login. Depois de preencher credenciais, aplicar migrações e provisionar a primeira conta, altere para `true` e execute `docker compose up --build -d`. Configuração habilitada incompleta impede a inicialização, sem imprimir os valores dos segredos.
+Após preencher as configurações, habilite KEYCLOAK_ENABLED=true, desative AUTH_BYPASS_ENABLED e execute docker compose up -d --build app. Se o Keycloak estiver desabilitado, o botão de login fica indisponível. Não copie credenciais de outros sistemas.
 
-## Migração explícita
+## Sessões e revogação
 
-O Compose não executa migrações na inicialização. Com PostgreSQL disponível e após realizar backup:
+A sessão local dura oito horas, sem renovação de sua validade. Cookies são HttpOnly, SameSite=Lax e Secure em HTTPS, com prefixo próprio dsi-panel. A primeira requisição autenticada revalida os tokens no Keycloak; verificações subsequentes são reaproveitadas por até 60 segundos por sessão. Verificações concorrentes do mesmo usuário compartilham a renovação. O SDK valida o novo ID token antes de sincronizar os papéis.
+
+Remoção de papéis, identidade divergente, ausência de ID token, falha na renovação ou indisponibilidade do provedor negam o acesso e revogam as sessões locais daquele usuário. Uma alteração no Keycloak é percebida na próxima requisição após a janela de até 60 segundos. Isso exige acesso do container ao Keycloak e emissão de refresh tokens.
+
+Sair revoga a sessão do painel e preserva o SSO global do Keycloak, como no Pinda Dados. Backchannel logout não foi implementado.
+
+O provisionamento manual legado auth:provision permanece disponível para compatibilidade operacional, mas seus papéis e desativações locais não são a autoridade do login institucional. O próximo login autorizado pode reativar a conta e substituir seus papéis. Para conceder, remover ou desativar acesso, utilize o Keycloak. Contas manuais sem papel autorizado no cliente não entram.
+
+## Segurança e auditoria
+
+Somente entrada Keycloak, callback e saída são expostos pela API. POST exige origem exata, JSON de até 4 KiB e destinos de retorno fixos. Login por senha, cadastro, vinculação e renovação direta de tokens pelo navegador são bloqueados. A revalidação usa somente chamadas internas ao SDK.
+
+O login aceita cinco tentativas por minuto e o callback dez, com limite no PostgreSQL compartilhado pela instalação, sem confiar em IP fornecido pelo cliente. Eventos de provisionamento, mudança de nome/papel, criação, recusa e revogação de sessão são auditados. Tokens e respostas do provedor não são registrados.
+
+## Banco e testes
+
+As migrações não são executadas automaticamente na inicialização. Para uma instalação nova:
 
 ```sh
 docker compose --profile tools build tools
 docker compose run --rm -T tools db:migrate
 ```
 
-A migração inicial cria contas, sessões, verificação OIDC, limitação de requisições, papéis, permissões, suas associações e auditoria. O banco continua em rede interna, sem porta publicada.
-
-## Provisionar acesso
-
-A ferramenta abaixo é administrativa e deve ser executada somente por operadores com acesso autorizado ao host/Docker. Lê JSON por stdin e não imprime dados pessoais ou credenciais. `KEYCLOAK_ISSUER` precisa estar preenchido; o login pode continuar desabilitado durante o provisionamento.
-
-Primeira conta, em PowerShell (substitua pelos valores reais; `subject` é o `sub` imutável recebido pelo cliente OIDC, não o e-mail):
-
-```powershell
-@{
-  action = 'provision'
-  name = 'Nome do administrador'
-  email = 'administrador@seu-orgao.example'
-  subject = 'SUB_NO_KEYCLOAK'
-  role = 'admin'
-} | ConvertTo-Json -Compress | docker compose run --rm -T tools auth:provision
-```
-
-A ferramenta retorna somente o UUID interno e a confirmação. Para contas seguintes, adicione `actorId` com o UUID de um administrador local ativo e escolha `role = 'member'` ou `'admin'`. `member` recebe `dashboard:read`; `admin` recebe também `users:manage` e `integrations:manage`. Não há tela de administração nesta entrega.
-
-Não reutilize um vínculo para outra conta: identidades e e-mails duplicados são recusados com rollback. Bootstrap e provisionamento são transacionais e serializados para impedir duas primeiras contas concorrentes. Não é possível obter acesso somente por possuir e-mail no mesmo domínio.
-
-Desativação local revoga as sessões em uma transação e gera auditoria:
-
-```powershell
-@{
-  action = 'deactivate'
-  actorId = 'UUID_DO_ADMINISTRADOR'
-  userId = 'UUID_DO_USUARIO'
-} | ConvertTo-Json -Compress | docker compose run --rm -T tools auth:provision
-```
-
-O último administrador ativo não pode ser desativado. O acesso aos comandos equivale a acesso administrativo ao banco e precisa ser restrito pela infraestrutura.
-
-## Sessões, autorização e limites
-
-Sessões locais duram oito horas, sem renovação automática. Cookies são HttpOnly e SameSite=Lax; Secure é aplicado em origens HTTPS. O prefixo próprio evita compartilhar cookies de sessão com DadosPinda. O controller do dashboard verifica autenticação e `dashboard:read` no servidor. Usuários desativados ou sem permissão são negados em cada requisição, sem cache de permissões no navegador.
-
-Somente entrada Keycloak, callback e saída são expostos pela API. POST exige origem exata, JSON limitado a 4 KiB e campos permitidos; URLs de retorno são fixas. O SDK limita entradas a cinco tentativas por minuto e callbacks a dez. O limite usa armazenamento no banco e um grupo compartilhado da instalação, sem confiar em cabeçalhos de IP fornecidos pelo cliente. Se o departamento necessitar maior volume, configure limitação por IP em proxy confiável e revise essa política.
-
-A auditoria registra provisionamento, desativação, criação/recusa de sessão de contas conhecidas e saída. Não armazena tokens nem corpos de requisição. Falhas internas usam eventos técnicos sanitizados, separados da auditoria.
-
-Sair revoga somente a sessão do DSI Panel. A sessão SSO global no Keycloak é preservada. Desabilitar alguém apenas no Keycloak não encerra sessões locais existentes; use a desativação local para efeito imediato. Backchannel logout e sincronização de grupos não fazem parte desta etapa.
-
-## Verificação
+Verificações:
 
 ```sh
 bun run lint
 bun run typecheck
 bun test
 bun run build
+docker compose -f compose.test.yml up --build --abort-on-container-exit --exit-code-from auth-tests
+docker compose -f compose.test.yml down
 ```
 
-Fluxo OIDC com RSA/JWKS fictícios e PostgreSQL efêmero isolado, sem Keycloak real:
-
-```sh
-docker compose -p dsi-panel-auth-test -f compose.test.yml up --build --abort-on-container-exit --exit-code-from auth-tests
-docker compose -p dsi-panel-auth-test -f compose.test.yml down
-```
-
-O banco de teste usa tmpfs e nome com sufixo `_test`; não recebe dados ou credenciais do banco da instalação. O teste cobre PKCE, cookies, vínculo explícito, tokens criptografados, replay, claims inválidas, saída e conta desativada.
-
-Testes de navegador cobrem a tela pública sem Keycloak configurado, redirecionamento de visitante e endpoints bloqueados. Para executar em container com Bun e Chromium, mantendo o navegador fora da imagem final da aplicação:
-
-```sh
-docker compose -f compose.yml -f compose.browser-test.yml run --build --rm -T browser-tests
-```
-
-As capturas são gravadas em `test-results/` (ignorado pelo Git). A instalação local também é possível, mas o Bun no Windows pode apresentar incompatibilidade na inicialização dos workers do Playwright. Com a aplicação Docker local nesse estado, em PowerShell:
-
-```powershell
-$env:E2E_BASE_URL = 'http://localhost:3000'
-$env:PLAYWRIGHT_CHANNEL = 'msedge' # opcional, se o Edge estiver instalado
-bun run test:e2e
-```
-
-Sem browser instalado, use `bunx --bun playwright install chromium`. A homologação de login real depende de configurar o realm, o cliente e a conta autorizada.
+Os testes de integração usam PostgreSQL isolado e um provedor OIDC simulado com tokens assinados, sem utilizar credenciais reais.
 
 ## Acesso para testes locais
 
-Defina AUTH_BYPASS_ENABLED=true no .env e execute docker compose up -d --build app. O painel abre sem login com a identidade temporária Teste local, somente para leitura. Não cria usuário nem sessão e não libera sincronização, vínculos ou administração. A aplicação recusa a flag em endereços APP_URL fora de localhost, 127.0.0.1 e ::1. O container continua limitado a 127.0.0.1 por padrão; não exponha este modo por proxy ou túnel. Para restaurar o login, defina AUTH_BYPASS_ENABLED=false e execute docker compose up -d app. O exemplo versionado mantém a flag desativada.
+AUTH_BYPASS_ENABLED=true mantém o acesso sem login em localhost, 127.0.0.1 ou ::1, somente para leitura e com aviso visível. Não cria usuário nem sessão e não permite sincronização, vínculos ou administração. O exemplo versionado mantém a flag desativada. Não exponha este modo por proxy ou túnel. Para restaurar o login, defina false e execute docker compose up -d app.

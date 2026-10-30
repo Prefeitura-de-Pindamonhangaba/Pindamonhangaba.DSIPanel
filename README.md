@@ -10,7 +10,7 @@ Requisitos: Bun 1.4.3 ou superior e Docker com Compose.
 2. Execute `bun install --frozen-lockfile`.
 3. Execute `bun run dev` e acesse http://localhost:3000.
 
-O painel exige login institucional via Keycloak e conta local autorizada. Configure as variáveis privadas, aplique as migrações e provisione a primeira conta conforme [autenticação](docs/autenticacao.md). Enquanto o Keycloak estiver desabilitado, a página de login permanece acessível e o painel fica protegido.
+O painel utiliza login institucional via Keycloak, com provisionamento automático e papéis viewer, operator e admin do próprio cliente. Configure as variáveis privadas, aplique as migrações e atribua os papéis conforme [autenticação](docs/autenticacao.md). Enquanto o Keycloak estiver desabilitado, a página de login permanece acessível e o painel fica protegido.
 
 ## Qualidade
 
