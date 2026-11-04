@@ -3,6 +3,14 @@ export function getDashboard(): DashboardData {
   return {
     resources: [
       {
+        title: "Quadro Kanban",
+        description:
+          "Organize as demandas da equipe em listas e acompanhe cada entrega.",
+        icon: "book",
+        status: "Abrir quadro",
+        href: "/kanban",
+      },
+      {
         title: "Chamados do DSI",
         description:
           "Acompanhe o grupo DSI no GLPI, os fornecedores e os níveis de serviço.",

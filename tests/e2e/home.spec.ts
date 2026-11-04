@@ -47,12 +47,12 @@ test("contratos e chamados exigem acesso institucional", async ({
   request,
 }) => {
   test.skip(testAccess, "Login ignorado no modo de teste local.");
-  for (const path of ["/contracts", "/tickets"]) {
+  for (const path of ["/contracts", "/tickets", "/kanban"]) {
     const response = await request.get(path, { maxRedirects: 0 });
     expect(response.status()).toBe(307);
     expect(response.headers()["location"]).toBe("/login");
   }
-  for (const path of ["/api/integrations/sync", "/api/tickets/contract"]) {
+  for (const path of ["/api/integrations/sync", "/api/tickets/contract", "/api/kanban"]) {
     expect((await request.post(path, { data: {} })).status()).toBe(401);
   }
 });
@@ -62,7 +62,7 @@ test("modo de teste libera navegação sem conceder escrita", async ({
   request,
 }) => {
   test.skip(!testAccess, "Modo de teste local desativado.");
-  for (const path of ["/", "/contracts", "/tickets"]) {
+  for (const path of ["/", "/contracts", "/tickets", "/kanban"]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
     await expect(
@@ -71,7 +71,7 @@ test("modo de teste libera navegação sem conceder escrita", async ({
   }
   await page.goto("/login");
   await expect(page).toHaveURL(/\/$/);
-  for (const path of ["/api/integrations/sync", "/api/tickets/contract"]) {
+  for (const path of ["/api/integrations/sync", "/api/tickets/contract", "/api/kanban"]) {
     expect((await request.post(path, { data: {} })).status()).toBe(403);
   }
 });

@@ -22,6 +22,20 @@
       "when": 1793275339386,
       "tag": "0002_integration-permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793735482655,
+      "tag": "0003_lumpy_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793735512155,
+      "tag": "0004_kanban-permissions",
+      "breakpoints": true
     }
   ]
 }

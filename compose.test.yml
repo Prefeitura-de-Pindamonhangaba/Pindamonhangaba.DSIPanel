@@ -25,6 +25,7 @@ services:
         "30000",
         "./tests/integration/keycloak-flow.test.ts",
         "./tests/integration/integration-storage.test.ts",
+        "./tests/integration/kanban-storage.test.ts",
       ]
     environment:
       NODE_ENV: test

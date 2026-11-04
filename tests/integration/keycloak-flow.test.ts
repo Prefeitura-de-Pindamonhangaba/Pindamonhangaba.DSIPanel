@@ -284,7 +284,7 @@ identityTest(
         (
           await createAuthRepository(db!).getPrincipal(targetId)
         )?.permissions.sort(),
-      ).toEqual(["dashboard:read", "integrations:manage"]);
+      ).toEqual(["dashboard:read", "integrations:manage", "kanban:write"]);
       const [stored] = await db!
         .select()
         .from(account)

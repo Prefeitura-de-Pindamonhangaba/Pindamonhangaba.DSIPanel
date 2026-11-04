@@ -36,3 +36,7 @@ Veja [a fundação](docs/fundacao.md) para arquitetura, migrações e operação
 ## Contratos e GLPI
 
 O painel possui módulos protegidos em `/contracts` e `/tickets`. Consulte [as integrações](docs/integracoes.md) para aplicar migrações, capturar os contratos da secretaria e configurar a conta de leitura do GLPI. Indicadores exibem a última captura disponível; vínculos manuais permanecem no DSI Panel.
+
+## Quadro Kanban
+
+O quadro compartilhado do DSI está em /kanban. Veja [funcionalidades e permissões](docs/kanban.md).

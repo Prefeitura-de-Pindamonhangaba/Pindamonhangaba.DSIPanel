@@ -8,11 +8,11 @@ No primeiro login com um papel autorizado do próprio cliente, o painel cria aut
 
 Papéis em resource_access[KEYCLOAK_CLIENT_ID].roles, em ordem de precedência:
 
-| Papel    | Permissões no DSI Panel                                    |
-| -------- | ---------------------------------------------------------- |
-| viewer   | Visualizar início, contratos e chamados                    |
-| operator | Visualizar e gerenciar integrações e vínculos de contratos |
-| admin    | Permissões de operator e users:manage                      |
+| Papel    | Permissões no DSI Panel                                                     |
+| -------- | --------------------------------------------------------------------------- |
+| viewer   | Visualizar início, contratos e chamados                                     |
+| operator | Visualizar, editar o Kanban e gerenciar integrações e vínculos de contratos |
+| admin    | Permissões de operator e users:manage                                       |
 
 O banco mantém um espelho dos papéis nas tabelas RBAC existentes. A autorização durante a sessão usa os papéis verificados pelo Keycloak, nunca uma promoção feita apenas no banco. Papéis e nome são atualizados no login e na revalidação. Não é necessária migração estrutural.
 
