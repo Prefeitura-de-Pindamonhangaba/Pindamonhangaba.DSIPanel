@@ -14,7 +14,7 @@ Ao criar o primeiro model persistido, adicione seu schema em `src/modules/<modul
 
 ## Operação
 
-O Docker utiliza estágios separados de dependências, build e execução; o runtime final utiliza Bun e usuário sem privilégios. O Next.js é executado sem standalone até sua compatibilidade ser validada no container.
+O Docker utiliza estágios separados de dependências, build e execução; o runtime final utiliza Bun e usuário sem privilégios. O Next.js usa standalone, validado com Bun no container; veja [build e deploy](deploy.md).
 
 Antes de disponibilizar fora da máquina local, configure controle de acesso de rede, HTTPS em proxy reverso e segredos próprios. Login e permissões já são verificados no servidor; configure Keycloak e contas antes de liberar acesso.
 
@@ -22,7 +22,7 @@ Para atualizar: valide qualidade, faça backup do PostgreSQL, gere a imagem com 
 
 Realize backups periódicos com `pg_dump` em formato custom, mantendo cópias protegidas fora do host. Teste a restauração com `pg_restore` em banco isolado antes de qualquer recuperação real. Preserve o volume em atualizações e mantenha a imagem anterior para rollback; migrações exigem análise própria de compatibilidade.
 
-O build utiliza Webpack, opção estável do Next.js, para evitar o erro observado entre Turbopack e Bun 1.3.1 no Windows. O container utiliza Bun 1.4.3 e executa lint, tipagem e testes unitários antes do build.
+O build utiliza Webpack, opção estável do Next.js, para evitar o erro observado entre Turbopack e Bun 1.3.1 no Windows. O container utiliza Bun 1.4.3. Lint, tipagem e testes unitários ficam no target checks; o build de produção é separado e conserva o cache do Next.js.
 
 ### Identidade visual institucional
 

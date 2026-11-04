@@ -5,6 +5,11 @@ export const keycloakRolePermissions: Record<
   readonly Permission[]
 > = {
   viewer: ["dashboard:read"],
-  operator: ["dashboard:read", "integrations:manage"],
-  admin: ["dashboard:read", "integrations:manage", "users:manage"],
+  operator: ["dashboard:read", "integrations:manage", "kanban:write"],
+  admin: [
+    "dashboard:read",
+    "integrations:manage",
+    "users:manage",
+    "kanban:write",
+  ],
 };

@@ -5,6 +5,7 @@ services:
         aliases: [dsi-panel.test]
       backend: {}
   browser-tests:
+    init: true
     profiles: [browser-tests]
     build:
       context: .
@@ -12,6 +13,7 @@ services:
     environment:
       E2E_BASE_URL: http://dsi-panel.test:3000
       E2E_AUTH_BYPASS_ENABLED: ${AUTH_BYPASS_ENABLED:-false}
+      E2E_KEYCLOAK_ENABLED: ${KEYCLOAK_ENABLED:-false}
     depends_on:
       app:
         condition: service_healthy

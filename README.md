@@ -27,7 +27,7 @@ Para os testes de navegador, instale o Chromium com `bunx --bun playwright insta
 
 ## Docker
 
-Com `.env` configurado, execute `docker compose up --build -d`. A aplicação fica disponível apenas em `127.0.0.1:3000`. PostgreSQL possui volume persistente e rede interna, sem porta publicada. Não utilize as credenciais de exemplo em produção. Senhas com caracteres especiais precisam ser codificadas para uso na URL de conexão do Compose.
+Com `.env` configurado, execute `docker compose up --build -d`. A publicação usa `APP_BIND_ADDRESS` e `APP_PORT` do `.env`; a URL do navegador é `APP_URL`. Para rede interna, utilize `APP_BIND_ADDRESS=0.0.0.0`. Veja [configuração de endereços e deploy](docs/deploy.md). PostgreSQL possui volume persistente e rede interna, sem porta publicada. Não utilize as credenciais de exemplo em produção. Senhas com caracteres especiais precisam ser codificadas para uso na URL de conexão do Compose.
 
 Para desenvolvimento de repositories no host, é necessário disponibilizar uma instância PostgreSQL de desenvolvimento e ajustar `DATABASE_URL`; o banco do Compose permanece sem porta publicada por padrão.
 
@@ -36,3 +36,7 @@ Veja [a fundação](docs/fundacao.md) para arquitetura, migrações e operação
 ## Contratos e GLPI
 
 O painel possui módulos protegidos em `/contracts` e `/tickets`. Consulte [as integrações](docs/integracoes.md) para aplicar migrações, capturar os contratos da secretaria e configurar a conta de leitura do GLPI. Indicadores exibem a última captura disponível; vínculos manuais permanecem no DSI Panel.
+
+## Quadro Kanban
+
+O quadro compartilhado do DSI está em /kanban. Veja [funcionalidades e permissões](docs/kanban.md). Para construir e atualizar a imagem compacta, consulte [build e deploy](docs/deploy.md).

@@ -14,6 +14,7 @@ services:
       retries: 20
     networks: [isolated]
   auth-tests:
+    init: true
     build:
       context: .
       target: tools
@@ -25,6 +26,7 @@ services:
         "30000",
         "./tests/integration/keycloak-flow.test.ts",
         "./tests/integration/integration-storage.test.ts",
+        "./tests/integration/kanban-storage.test.ts",
       ]
     environment:
       NODE_ENV: test

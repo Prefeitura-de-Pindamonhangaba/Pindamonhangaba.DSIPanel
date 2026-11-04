@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 const testAccess = process.env.E2E_AUTH_BYPASS_ENABLED === "true";
-test("painel exige login e mostra acesso institucional ainda não configurado", async ({
+test("painel exige login e respeita configuração do acesso institucional", async ({
   page,
 }) => {
   test.skip(testAccess, "Login ignorado no modo de teste local.");
@@ -18,12 +18,15 @@ test("painel exige login e mostra acesso institucional ainda não configurado", 
   await expect(
     page.getByRole("heading", { name: "Acesse o DSI Panel" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Login", exact: true }),
-  ).toBeDisabled();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "indisponível" }),
-  ).toBeVisible();
+  const login = page.getByRole("button", { name: "Login", exact: true });
+  if (process.env.E2E_KEYCLOAK_ENABLED === "true") {
+    await expect(login).toBeEnabled();
+  } else {
+    await expect(login).toBeDisabled();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "indisponível" }),
+    ).toBeVisible();
+  }
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -47,12 +50,16 @@ test("contratos e chamados exigem acesso institucional", async ({
   request,
 }) => {
   test.skip(testAccess, "Login ignorado no modo de teste local.");
-  for (const path of ["/contracts", "/tickets"]) {
+  for (const path of ["/contracts", "/tickets", "/kanban"]) {
     const response = await request.get(path, { maxRedirects: 0 });
     expect(response.status()).toBe(307);
     expect(response.headers()["location"]).toBe("/login");
   }
-  for (const path of ["/api/integrations/sync", "/api/tickets/contract"]) {
+  for (const path of [
+    "/api/integrations/sync",
+    "/api/tickets/contract",
+    "/api/kanban",
+  ]) {
     expect((await request.post(path, { data: {} })).status()).toBe(401);
   }
 });
@@ -62,7 +69,7 @@ test("modo de teste libera navegação sem conceder escrita", async ({
   request,
 }) => {
   test.skip(!testAccess, "Modo de teste local desativado.");
-  for (const path of ["/", "/contracts", "/tickets"]) {
+  for (const path of ["/", "/contracts", "/tickets", "/kanban"]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);
     await expect(

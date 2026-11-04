@@ -5,6 +5,8 @@ export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  APP_BIND_ADDRESS: z.union([z.ipv4(), z.ipv6()]).default("127.0.0.1"),
+  APP_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   APP_URL: z.url().refine((value) => {
     if (!URL.canParse(value)) return false;
     const url = new URL(value);
@@ -14,9 +16,7 @@ export const envSchema = z.object({
       !url.search &&
       !url.hash &&
       url.pathname === "/" &&
-      (url.protocol === "https:" ||
-        (url.protocol === "http:" &&
-          ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+      (url.protocol === "https:" || url.protocol === "http:")
     );
   }),
   DATABASE_URL: z
@@ -27,10 +27,17 @@ export const envSchema = z.object({
     ),
 });
 export function getEnv() {
-  isTestAccessEnabled(process.env);
+  const testAccess = isTestAccessEnabled(process.env);
   const result = envSchema.safeParse(process.env);
   if (!result.success)
-    throw new Error("Configuração inválida: verifique APP_URL e DATABASE_URL.");
+    throw new Error(
+      "Configuração inválida: verifique APP_URL, APP_BIND_ADDRESS, APP_PORT e DATABASE_URL.",
+    );
+  if (
+    testAccess &&
+    !["127.0.0.1", "::1"].includes(result.data.APP_BIND_ADDRESS)
+  )
+    throw new Error("Modo sem login exige APP_BIND_ADDRESS=127.0.0.1 ou ::1.");
   return result.data;
 }
 
