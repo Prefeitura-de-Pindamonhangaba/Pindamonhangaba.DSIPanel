@@ -1,47 +1,57 @@
+# syntax=docker/dockerfile:1
 FROM oven/bun:1.4.3 AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 FROM base AS dependencies
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,id=dsi-bun,target=/root/.bun/install/cache,sharing=locked bun install --frozen-lockfile
 
-FROM base AS build
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
-RUN bun run lint && bun run typecheck && bun test && bun run build
+# Só arquivos usados pela aplicação invalidam a compilação.
+FROM dependencies AS source
+COPY tsconfig.json next-env.d.ts next.config.ts ./
+COPY src ./src
+COPY public ./public
 
-FROM build AS tools
+# Ferramentas e testes não dependem da compilação de produção.
+FROM source AS tools
+COPY scripts ./scripts
+COPY --chown=bun:bun drizzle ./drizzle
+COPY tests ./tests
+COPY drizzle.config.ts bunfig.toml eslint.config.mjs playwright.config.ts ./
+RUN chown bun:bun /app
 USER bun
 ENTRYPOINT ["bun", "run"]
 
-FROM dependencies AS browser-tests
+FROM tools AS checks
+RUN bun run lint && bun run typecheck && bun test
+
+# O navegador só é instalado quando as dependências mudam.
+FROM dependencies AS browser-dependencies
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-RUN bun --bun playwright install --with-deps chromium
-COPY --from=build /app /app
+RUN --mount=type=cache,id=dsi-apt,target=/var/cache/apt,sharing=locked bun --bun playwright install --with-deps chromium
+
+FROM browser-dependencies AS browser-tests
+COPY --from=tools /app /app
 RUN mkdir -p /app/test-results && chown bun:bun /app/test-results
 USER bun
 CMD ["bun", "run", "test:e2e"]
 
-FROM base AS production-dependencies
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
+FROM source AS build
+ENV NODE_ENV=production
+RUN --mount=type=cache,id=dsi-next,target=/app/.next/cache bun run build
+
+FROM source AS validation
+COPY scripts/validate-environment.ts ./scripts/validate-environment.ts
+RUN bun build --target=bun --minify --outfile=/app/validate-environment.js ./scripts/validate-environment.ts
 
 FROM base AS runner
-ENV NODE_ENV=production
-COPY --from=production-dependencies --chown=bun:bun /app/node_modules ./node_modules
-COPY --from=build --chown=bun:bun /app/.next ./.next
-COPY --from=build --chown=bun:bun /app/public ./public
-COPY --from=build --chown=bun:bun /app/package.json ./package.json
-COPY --from=build --chown=bun:bun /app/THIRD_PARTY_NOTICES.md ./THIRD_PARTY_NOTICES.md
-COPY --from=build --chown=bun:bun /app/next.config.ts ./next.config.ts
-COPY --from=build --chown=bun:bun /app/tsconfig.json ./tsconfig.json
-COPY --from=build --chown=bun:bun /app/scripts/validate-environment.ts ./scripts/validate-environment.ts
-COPY --from=build --chown=bun:bun /app/src/shared/lib/env.ts ./src/shared/lib/env.ts
-COPY --from=build --chown=bun:bun /app/src/modules/auth/services/keycloak-config.ts ./src/modules/auth/services/keycloak-config.ts
-COPY --from=build --chown=bun:bun /app/src/modules/auth/services/test-access-service.ts ./src/modules/auth/services/test-access-service.ts
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
+COPY --from=build --chown=bun:bun /app/.next/standalone ./
+COPY --from=build --chown=bun:bun /app/.next/static ./.next/static
+COPY --from=source --chown=bun:bun /app/public ./public
+COPY --chown=bun:bun THIRD_PARTY_NOTICES.md ./
+COPY --from=validation --chown=bun:bun /app/validate-environment.js ./validate-environment.js
 USER bun
 EXPOSE 3000
-CMD ["bun", "run", "start"]
-
-
+CMD ["sh", "-c", "bun validate-environment.js && exec bun server.js"]

@@ -1,11 +1,29 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: runner
     ports:
-      - "127.0.0.1:3000:3000"
+      - target: 3000
+        published: "${APP_PORT:-3000}"
+        host_ip: ${APP_BIND_ADDRESS:-0.0.0.0}
+        protocol: tcp
+    init: true
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: ${APP_MEMORY_LIMIT:-768m}
+    stop_grace_period: 30s
+    logging: &bounded-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment: &app-environment
       NODE_ENV: production
       APP_URL: ${APP_URL:?Defina APP_URL}
+      APP_BIND_ADDRESS: ${APP_BIND_ADDRESS:-0.0.0.0}
+      APP_PORT: ${APP_PORT:-3000}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:?Defina POSTGRES_USER}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:?Defina POSTGRES_DB}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       KEYCLOAK_ENABLED: ${KEYCLOAK_ENABLED:-false}
@@ -27,7 +45,7 @@ services:
           "CMD",
           "bun",
           "-e",
-          "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/login',{redirect:'manual',signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.status>=200&&r.status<400?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
@@ -47,6 +65,10 @@ services:
     networks: [frontend, backend]
   db:
     image: postgres:17.6-alpine
+    cpus: ${POSTGRES_CPUS:-1.0}
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-512m}
+    stop_grace_period: 30s
+    logging: *bounded-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
