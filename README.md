@@ -42,3 +42,5 @@ O painel possui módulos protegidos em `/contracts` e `/tickets`. Consulte [as i
 O quadro compartilhado do DSI está em /kanban. Veja [funcionalidades e permissões](docs/kanban.md). Para construir e atualizar a imagem compacta, consulte [build e deploy](docs/deploy.md).
 
 Para acessar por HTTPS, veja [certificados, proxy e Keycloak](docs/https.md).
+
+Para produção com PostgreSQL externo e Nginx Proxy Manager, veja [a configuração de produção](docs/producao.md).

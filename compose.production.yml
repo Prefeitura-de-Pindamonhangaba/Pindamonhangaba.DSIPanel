@@ -1,0 +1,68 @@
+# PostgreSQL externo e HTTPS pelo Nginx Proxy Manager existente.
+name: dsi-panel-production
+services:
+  app:
+    image: ${APP_IMAGE:-dsi-panel:production}
+    build:
+      context: .
+      target: runner
+    init: true
+    cpus: ${APP_CPUS:-1.0}
+    mem_limit: ${APP_MEMORY_LIMIT:-512m}
+    stop_grace_period: 30s
+    restart: unless-stopped
+    environment: &production-environment
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      APP_URL: ${APP_URL:?Defina a URL HTTPS de producao}
+      APP_BIND_ADDRESS: 0.0.0.0
+      APP_PORT: 443
+      DATABASE_URL: ${DATABASE_URL:?Defina a conexao PostgreSQL de producao}
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-/certificates/postgres-root.crt}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Defina um segredo exclusivo de producao}
+      AUTH_BYPASS_ENABLED: "false"
+      KEYCLOAK_ENABLED: "true"
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:?Defina o realm de producao}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:?Defina o cliente de producao}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:?Defina o segredo do cliente de producao}
+      GLPI_API_URL: ${GLPI_API_URL:-https://glpi.pindamonhangaba.sp.gov.br/apirest.php/}
+      GLPI_APP_TOKEN: ${GLPI_APP_TOKEN:-}
+      GLPI_USER_TOKEN: ${GLPI_USER_TOKEN:-}
+      GLPI_DSI_GROUP_ID: ${GLPI_DSI_GROUP_ID:-}
+      GLPI_TIME_ZONE: ${GLPI_TIME_ZONE:-America/Sao_Paulo}
+    volumes: &production-certificates
+      - ./certificates:/certificates:ro,z
+    networks:
+      proxy:
+        aliases: [dsi-panel-production]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://127.0.0.1:3000/brand/prefeitura-pindamonhangaba.svg',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  tools:
+    profiles: [tools]
+    image: ${TOOLS_IMAGE:-dsi-panel-tools:production}
+    build:
+      context: .
+      target: tools
+    environment: *production-environment
+    volumes: *production-certificates
+    networks: [proxy]
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-nginx-proxy-manager_default}
