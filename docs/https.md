@@ -87,3 +87,11 @@ A lista de serviços precisa incluir proxy. Se não incluir, o servidor ainda es
 A tela de login agora identifica o acesso por outra origem e oferece o endereço configurado antes de enviar a autenticação. A API mantém 403 para origens divergentes e retorna o código AUTH_ORIGIN_MISMATCH, com a URL pública permitida. Não são registrados cookies, tokens ou credenciais.
 
 Se surgir outro erro depois de corrigir a origem, verifique separadamente o certificado do Keycloak e os papéis do cliente. O erro de CA UNABLE_TO_VERIFY_LEAF_SIGNATURE não deve ser contornado desabilitando TLS.
+
+## Certificado interno do Keycloak e versão do Bun
+
+O Bun 1.4.4 corrige a confiança em certificados autoassinados com `CA:FALSE`, quando fornecidos por `NODE_EXTRA_CA_CERTS` ou `ca`. O container fixa essa versão para permitir a validação do certificado interno existente, sem desligar TLS. Mantenha a cópia pública confiável em `certificates/keycloak-ca.pem` e configure `NODE_EXTRA_CA_CERTS=/certificates/keycloak-ca.pem`. Nunca copie a chave privada do Keycloak para a aplicação.
+
+Em servidores com regras `DOCKER-USER` restritivas, a rede frontend do painel também precisa de permissão específica para alcançar o endereço e a porta do Keycloak. Preserve as demais regras e inclua a liberação no mecanismo de persistência do firewall do servidor.
+
+Referência: [correções de TLS no Bun 1.4.4](https://bun.sh/blog/bun-v1.4.4#tls).

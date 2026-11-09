@@ -4,7 +4,7 @@ Ambiente interno do Departamento de Sistemas da Prefeitura de Pindamonhangaba.
 
 ## Desenvolvimento
 
-Requisitos: Bun 1.4.3 ou superior e Docker com Compose.
+Requisitos: Bun 1.4.4 ou superior e Docker com Compose.
 
 1. Copie `.env.example` para `.env` e ajuste as configurações locais.
 2. Execute `bun install --frozen-lockfile`.
