@@ -19,11 +19,19 @@ A conexão PostgreSQL deve validar o servidor com TLS. Na instalação municipal
 
 ## Keycloak
 
-O arquivo `docker/compose.keycloak-production.yml` pode ser instalado como `compose.yml` no diretório próprio do Keycloak. O Nginx Proxy Manager encaminha por HTTPS para `10.0.0.193:8082`, publicado com `KC_BIND_ADDRESS=10.0.0.193` e `KC_HTTP_PORT=8082`, mapeando a porta interna 8443. Configure `KC_PROXY_TRUSTED_ADDRESSES` para o IP do proxy e encaminhe `X-Forwarded-Proto`, host e porta corretamente. A porta de gerenciamento não é publicada.
+A infraestrutura do Keycloak é mantida no repositório [Pindamonhangaba.Containers](https://github.com/Prefeitura-de-Pindamonhangaba/Pindamonhangaba.Containers), diretório `Keycloak`. No servidor, a configuração ativa fica em `/opt/PRD/Pindamonhangaba.Containers/Keycloak`. O Compose principal desse repositório é usado sem alterações, junto da sobreposição `compose.production.yml` para PostgreSQL externo. O workflow do DSI Panel atualiza apenas o painel.
 
-Para administração interna sem depender do DNS público, configure `KC_HOSTNAME_ADMIN=https://10.0.0.193:8082` e a URL de frontend apenas do realm `master` para esse mesmo endereço. O hostname global e o realm institucional continuam usando o domínio SSO. O certificado interno precisa conter o IP no SAN; mantenha certificado e chave em `tls/server.crt` e `tls/server.key`, com chave legível apenas pelo usuário do Keycloak. A CA fica no servidor; somente sua parte pública é fornecida aos clientes para confiança manual. No proxy, valide o certificado do upstream com essa CA. Essa configuração é separada do certificado público do domínio, que permanece necessário para o acesso externo.
+```sh
+cd /opt/PRD/Pindamonhangaba.Containers/Keycloak
+docker compose -p keycloak-production -f compose.yml -f compose.production.yml config --quiet
+docker compose -p keycloak-production -f compose.yml -f compose.production.yml up -d --wait --wait-timeout 600 keycloak
+```
 
-Configure `KC_DB_URL` com JDBC PostgreSQL, `sslmode=verify-full` e `sslrootcert=/certificates/postgres-root.crt`, além de `KC_DB_USERNAME`, `KC_DB_PASSWORD` e as credenciais de bootstrap administrativo em arquivo privado. `KC_HOSTNAME` fixa `https://sso.pindamonhangaba.sp.gov.br`.
+A sobreposição desativa o PostgreSQL local no perfil padrão, preserva o banco migrado em `10.0.0.4` e utiliza JDBC com `sslmode=verify-full`. Credenciais ficam no `.env` privado dessa instalação; a CA pública do banco fica em `certificates/postgres-root.crt`.
+
+O acesso administrativo usa `KC_HOSTNAME=https://10.0.0.193:8082`, `KC_BIND_ADDRESS=10.0.0.193` e `KC_HTTP_PORT=8082`, com HTTPS nativo na porta interna 8443. O certificado em `tls/server.crt` contém o IP no SAN; sua chave privada em `tls/server.key` fica legível apenas pelo Keycloak. O Nginx Proxy Manager encaminha por HTTPS para esse IP e verifica o certificado interno usando a CA correspondente. A confiança no certificado interno dos clientes é manual; o certificado público do domínio é uma configuração separada.
+
+O realm `master` utiliza a URL canônica por IP. A URL de frontend do realm `pindamonhangaba` permanece `https://sso.pindamonhangaba.sp.gov.br`, preservando o issuer institucional utilizado pelo painel. Os endereços administrativos não dependem do DNS público. A publicação pública do SSO depende do DNS e do HTTPS no proxy.
 
 A migração de um realm usa exportação consistente com a origem parada, backup anterior e importação com `--override false`. Proteja os arquivos exportados: podem conter credenciais de usuários e clientes. Preserve os identificadores dos usuários, revise papéis e redirecionamentos e gere segredo próprio para o cliente do painel em produção. Sessões existentes exigirão novo login. Temas personalizados precisam ser transferidos separadamente.
 
