@@ -43,7 +43,7 @@ services:
           "CMD",
           "bun",
           "-e",
-          "fetch('http://127.0.0.1:3000/login',{redirect:'manual',signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.status>=200&&r.status<400?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/brand/prefeitura-pindamonhangaba.svg',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
