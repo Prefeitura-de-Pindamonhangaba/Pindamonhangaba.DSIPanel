@@ -4,7 +4,7 @@ Ambiente interno do Departamento de Sistemas da Prefeitura de Pindamonhangaba.
 
 ## Desenvolvimento
 
-Requisitos: Bun 1.4.3 ou superior e Docker com Compose.
+Requisitos: Bun 1.4.4 ou superior e Docker com Compose.
 
 1. Copie `.env.example` para `.env` e ajuste as configurações locais.
 2. Execute `bun install --frozen-lockfile`.
@@ -40,3 +40,5 @@ O painel possui módulos protegidos em `/contracts` e `/tickets`. Consulte [as i
 ## Quadro Kanban
 
 O quadro compartilhado do DSI está em /kanban. Veja [funcionalidades e permissões](docs/kanban.md). Para construir e atualizar a imagem compacta, consulte [build e deploy](docs/deploy.md).
+
+Para acessar por HTTPS, veja [certificados, proxy e Keycloak](docs/https.md).

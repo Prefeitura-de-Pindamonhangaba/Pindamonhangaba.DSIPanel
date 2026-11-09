@@ -1,0 +1,17 @@
+{
+	auto_https disable_redirects
+	skip_install_trust
+	default_sni {$TLS_SERVER_NAME}
+	servers {
+		protocols h1 h2
+		listener_wrappers {
+			http_redirect
+			tls
+		}
+	}
+}
+
+{$APP_URL} {
+	encode gzip
+	reverse_proxy app:3000
+}

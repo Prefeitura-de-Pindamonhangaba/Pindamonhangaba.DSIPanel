@@ -28,7 +28,7 @@ docker compose build app
 docker compose --profile tools build tools
 docker compose run --rm -T tools db:migrate
 # Inicialização não executa migrações:
-docker compose up -d --no-build app
+docker compose up -d --no-build app proxy
 docker compose ps
 ```
 
@@ -62,20 +62,12 @@ APP_PORT=3002
 
 Acesse a URL acima. Se alterar a porta, ajuste APP_URL e APP_PORT juntos. O endereço precisa pertencer ao servidor ou resolver para ele; definir APP_URL não configura DNS, firewall nem certificados.
 
-Com proxy HTTPS no próprio host:
-
-```env
-APP_URL=https://painel.seu-dominio.example
-APP_BIND_ADDRESS=127.0.0.1
-APP_PORT=3002
-```
-
-Nesse caso, o proxy recebe HTTPS e encaminha para http://127.0.0.1:3002. Se ele estiver em outra máquina, publique a interface de rede apropriada. O container Next.js fornece HTTP; mudar APP_URL para https não cria um certificado ou habilita TLS na porta publicada.
+Com HTTPS, o Caddy incluído no Compose recebe a conexão e encaminha para app:3000. Para um IP interno, é necessário confiar na CA local emitida pelo servidor. Veja [HTTPS e configuração do Keycloak](https.md). Para um domínio público sem porta explícita, configure APP_PORT=443.
 
 Após mudar apenas endereços ou credenciais:
 
 ```sh
-docker compose up -d --no-build --force-recreate app
+docker compose up -d --no-build --force-recreate app proxy
 ```
 
 Não é necessário recompilar. Use up, e não apenas restart, para atualizar as variáveis e o mapeamento de portas. No Keycloak, os endereços de callback e a web origin devem corresponder à nova APP_URL. O log de inicialização informa a URL pública; o endereço localhost:3000 exibido pelo Next.js refere-se ao processo dentro do container.
@@ -84,7 +76,7 @@ Para testes sem login, configure APP_URL com localhost e APP_BIND_ADDRESS=127.0.
 
 ## Recursos e logs
 
-O .env permite ajustar APP_CPUS, APP_MEMORY_LIMIT, POSTGRES_CPUS e POSTGRES_MEMORY_LIMIT. Os padrões são 1 CPU/768 MB para a aplicação e 1 CPU/512 MB para PostgreSQL. São limites de execução, não uma reserva fixa nem limites do builder. Ajuste-os conforme o volume e monitore docker stats. Os logs de cada serviço são limitados a três arquivos de 10 MB; o PostgreSQL continua em rede interna e sem porta publicada. O processo da aplicação usa init para encaminhar sinais e encerrar filhos corretamente, com 30 segundos para desligamento.
+O .env permite ajustar APP_CPUS, APP_MEMORY_LIMIT, POSTGRES_CPUS e POSTGRES_MEMORY_LIMIT. Os padrões são 1 CPU/768 MB para a aplicação e 1 CPU/512 MB para PostgreSQL. São limites de execução, não uma reserva fixa nem limites do builder. Ajuste-os conforme o volume e monitore docker stats. Os logs de cada serviço são limitados a três arquivos de 10 MB; o PostgreSQL continua em rede interna e sem porta publicada. O proxy tem limites próprios via PROXY_CPUS e PROXY_MEMORY_LIMIT. O processo da aplicação usa init para encaminhar sinais e encerrar filhos corretamente, com 30 segundos para desligamento.
 
 O target tools tem diretório de trabalho e migrações graváveis pelo usuário bun. O target checks também executa sem root. As três configurações de Compose são validadas separadamente: compose.yml para deploy, compose.browser-test.yml para navegador e compose.test.yml para banco isolado. O teste de saúde consulta o processo interno, independentemente do IP público, porta externa ou proxy TLS.
 

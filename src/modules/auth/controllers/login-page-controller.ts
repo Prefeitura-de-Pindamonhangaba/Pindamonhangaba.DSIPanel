@@ -5,6 +5,7 @@ import { parseKeycloakEnvironment } from "../services/keycloak-config";
 import { getPrincipal } from "./access-controller";
 import { canAccess } from "../services/access-service";
 import { z } from "zod";
+import { getEnv } from "@/shared/lib/env";
 
 export async function getLoginPageController(search: unknown) {
   const parsed = z
@@ -18,6 +19,7 @@ export async function getLoginPageController(search: unknown) {
   const principal = await getPrincipal(await headers());
   if (canAccess(principal, "dashboard:read")) redirect("/");
   return {
+    loginURL: `${new URL(getEnv().APP_URL).origin}/login`,
     keycloakEnabled,
     denied:
       Boolean(principal) || (parsed.success && parsed.data.access === "denied"),

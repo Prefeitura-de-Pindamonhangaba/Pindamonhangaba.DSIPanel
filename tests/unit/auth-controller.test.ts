@@ -61,6 +61,26 @@ test("controller recusa origem externa e métodos incorretos", async () => {
     ).status,
   ).toBe(405);
 });
+test("origem HTTP ou porta diferente é recusada com orientação para a URL configurada", async () => {
+  for (const origin of [
+    "http://panel.example.test",
+    "https://panel.example.test:3002",
+    "null",
+  ]) {
+    const response = await handleAuthRequest(request("sign-in/social", origin));
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      code: "AUTH_ORIGIN_MISMATCH",
+      message: "Acesse o painel pelo endereço configurado para entrar.",
+      loginURL: "https://panel.example.test/login",
+    });
+  }
+  const allowed = await handleAuthRequest(
+    request("sign-in/social", "https://panel.example.test"),
+  );
+  expect(allowed.status).toBe(400);
+});
 test("controller rejeita destinos externos e token direto antes de chamar o SDK", async () => {
   for (const extra of [
     { callbackURL: "https://evil.test" },

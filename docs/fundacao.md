@@ -22,7 +22,7 @@ Para atualizar: valide qualidade, faça backup do PostgreSQL, gere a imagem com 
 
 Realize backups periódicos com `pg_dump` em formato custom, mantendo cópias protegidas fora do host. Teste a restauração com `pg_restore` em banco isolado antes de qualquer recuperação real. Preserve o volume em atualizações e mantenha a imagem anterior para rollback; migrações exigem análise própria de compatibilidade.
 
-O build utiliza Webpack, opção estável do Next.js, para evitar o erro observado entre Turbopack e Bun 1.3.1 no Windows. O container utiliza Bun 1.4.3. Lint, tipagem e testes unitários ficam no target checks; o build de produção é separado e conserva o cache do Next.js.
+O build utiliza Webpack, opção estável do Next.js, para evitar o erro observado entre Turbopack e Bun 1.3.1 no Windows. O container utiliza Bun 1.4.4. Lint, tipagem e testes unitários ficam no target checks; o build de produção é separado e conserva o cache do Next.js.
 
 ### Identidade visual institucional
 
