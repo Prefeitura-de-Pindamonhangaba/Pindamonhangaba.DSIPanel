@@ -1,6 +1,6 @@
 # Produção com PostgreSQL externo
 
-O ambiente de produção usa `compose.production.yml`, separado do Compose de desenvolvimento. A aplicação recebe `DATABASE_URL` diretamente e não inicia PostgreSQL nem Caddy. O Nginx Proxy Manager existente termina HTTPS e alcança `dsi-panel-production:3000` pela rede Docker externa definida em `PROXY_NETWORK`. Não há porta da aplicação publicada no host.
+O ambiente de produção usa `compose.production.yml`, separado do Compose de desenvolvimento. A aplicação recebe `DATABASE_URL` diretamente e não inicia PostgreSQL nem Caddy. O Nginx Proxy Manager existente termina HTTPS e encaminha para `10.0.0.193:3004`. A publicação usa `APP_BIND_ADDRESS` e `APP_PORT`; a porta interna permanece 3000. A URL de autenticação continua sendo o domínio HTTPS de `APP_URL`.
 
 Copie `.env.production.example` para `.env.production`, preencha as credenciais próprias e restrinja o arquivo ao responsável pelo deploy. O login institucional é obrigatório nessa configuração. Não copie o `.env` nem o banco do DSI Panel de desenvolvimento para produção.
 
@@ -19,7 +19,7 @@ A conexão PostgreSQL deve validar o servidor com TLS. Na instalação municipal
 
 ## Keycloak
 
-O arquivo `docker/compose.keycloak-production.yml` pode ser instalado como `compose.yml` no diretório próprio do Keycloak. A mesma rede externa permite que o Nginx Proxy Manager alcance `keycloak-production:8080`. Configure `KC_PROXY_TRUSTED_ADDRESSES` para o IP do proxy e encaminhe `X-Forwarded-Proto`, host e porta corretamente. Não publique as portas internas ou de gerenciamento.
+O arquivo `docker/compose.keycloak-production.yml` pode ser instalado como `compose.yml` no diretório próprio do Keycloak. O Nginx Proxy Manager encaminha para `10.0.0.193:8082`, publicado com `KC_BIND_ADDRESS=10.0.0.193` e `KC_HTTP_PORT=8082`. Configure `KC_PROXY_TRUSTED_ADDRESSES` para o IP do proxy e encaminhe `X-Forwarded-Proto`, host e porta corretamente. A porta de gerenciamento não é publicada.
 
 Configure `KC_DB_URL` com JDBC PostgreSQL, `sslmode=verify-full` e `sslrootcert=/certificates/postgres-root.crt`, além de `KC_DB_USERNAME`, `KC_DB_PASSWORD` e as credenciais de bootstrap administrativo em arquivo privado. `KC_HOSTNAME` fixa `https://sso.pindamonhangaba.sp.gov.br`.
 
