@@ -3,11 +3,6 @@ services:
     build:
       context: .
       target: runner
-    ports:
-      - target: 3000
-        published: "${APP_PORT:-3000}"
-        host_ip: ${APP_BIND_ADDRESS:-0.0.0.0}
-        protocol: tcp
     init: true
     cpus: ${APP_CPUS:-1.0}
     mem_limit: ${APP_MEMORY_LIMIT:-768m}
@@ -24,6 +19,7 @@ services:
       APP_PORT: ${APP_PORT:-3000}
       HOSTNAME: 0.0.0.0
       PORT: 3000
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:?Defina POSTGRES_USER}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:?Defina POSTGRES_DB}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       KEYCLOAK_ENABLED: ${KEYCLOAK_ENABLED:-false}
@@ -36,6 +32,8 @@ services:
       GLPI_USER_TOKEN: ${GLPI_USER_TOKEN:-}
       GLPI_DSI_GROUP_ID: ${GLPI_DSI_GROUP_ID:-}
       GLPI_TIME_ZONE: ${GLPI_TIME_ZONE:-America/Sao_Paulo}
+    volumes: &public-ca-volumes
+      - ./certificates:/certificates:ro
     depends_on:
       db:
         condition: service_healthy
@@ -53,12 +51,51 @@ services:
       retries: 3
     restart: unless-stopped
     networks: [frontend, backend]
+  proxy:
+    image: caddy:2.11.7-alpine
+    entrypoint: ["/bin/sh", "/etc/caddy/start-proxy.sh"]
+    init: true
+    ports:
+      - target: ${APP_PORT:-3000}
+        published: "${APP_PORT:-3000}"
+        host_ip: ${APP_BIND_ADDRESS:-0.0.0.0}
+        protocol: tcp
+    environment:
+      APP_URL: ${APP_URL:?Defina APP_URL}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/start-proxy.sh:/etc/caddy/start-proxy.sh:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "-O",
+          "/dev/null",
+          "http://127.0.0.1:2019/config/",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    cpus: ${PROXY_CPUS:-0.5}
+    mem_limit: ${PROXY_MEMORY_LIMIT:-128m}
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    restart: unless-stopped
+    networks: [frontend]
   tools:
     profiles: [tools]
     build:
       context: .
       target: tools
     environment: *app-environment
+    volumes: *public-ca-volumes
     depends_on:
       db:
         condition: service_healthy
@@ -84,6 +121,8 @@ services:
     networks: [backend]
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
 networks:
   frontend:
   backend:

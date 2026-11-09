@@ -28,8 +28,16 @@ export async function handleAuthRequest(request: Request) {
     if (!parseKeycloakEnvironment(process.env).enabled)
       return json("Acesso institucional indisponível.", 503);
     if (request.method === "POST") {
-      if (request.headers.get("origin") !== new URL(getEnv().APP_URL).origin)
-        return json("Origem não autorizada.", 403);
+      const publicOrigin = new URL(getEnv().APP_URL).origin;
+      if (request.headers.get("origin") !== publicOrigin)
+        return Response.json(
+          {
+            code: "AUTH_ORIGIN_MISMATCH",
+            message: "Acesse o painel pelo endereço configurado para entrar.",
+            loginURL: `${publicOrigin}/login`,
+          },
+          { status: 403, headers: { "Cache-Control": "no-store" } },
+        );
       try {
         const body = await readJson(request.clone());
         const schema = path.endsWith("/social")

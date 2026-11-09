@@ -8,10 +8,12 @@ export function LoginPage({
   keycloakEnabled,
   failed,
   denied,
+  loginURL,
 }: {
   keycloakEnabled: boolean;
   failed: boolean;
   denied: boolean;
+  loginURL: string;
 }) {
   return (
     <div className="login-shell">
@@ -35,7 +37,7 @@ export function LoginPage({
           <div className="login-card">
             <h2>Acesse o DSI Panel</h2>
             <p>Entre com sua conta institucional da Prefeitura.</p>
-            <LoginButton enabled={keycloakEnabled} />
+            <LoginButton enabled={keycloakEnabled} loginURL={loginURL} />
             {(!keycloakEnabled || failed || denied) && (
               <p className="auth-notice" role="alert">
                 {!keycloakEnabled
