@@ -12,8 +12,9 @@ incoming=/var/lib/dsi-panel-delivery
 state=/var/lib/dsi-panel-deploy
 release="$state/releases/$revision"
 stamp=$(date -u +%Y%m%d-%H%M%S)
-backup="$state/backups/$stamp-$revision"
-mkdir -p "$release/docker" "$backup"
+mkdir -p "$release/docker" "$state/backups"
+backup=$(mktemp -d "$state/backups/$stamp-$revision-XXXXXX")
+[[ -d "$incoming/docker" && ! -L "$incoming/docker" ]] || { echo 'Diretorio de entrega invalido.'; exit 1; }
 for file in images.tar.gz compose.yml compose.production.yml docker/Caddyfile docker/start-proxy.sh; do
   [[ -f "$incoming/$file" && ! -L "$incoming/$file" ]] || { echo 'Entrega incompleta.'; exit 1; }
 done
