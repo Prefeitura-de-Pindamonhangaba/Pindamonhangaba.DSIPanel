@@ -45,6 +45,17 @@ FROM source AS validation
 COPY scripts/validate-environment.ts ./scripts/validate-environment.ts
 RUN bun build --target=bun --minify --outfile=/app/validate-environment.js ./scripts/validate-environment.ts
 
+# Executor pequeno de migrações, separado da aplicação.
+FROM source AS migration-build
+COPY scripts/migrate-database.ts ./scripts/migrate-database.ts
+RUN bun build --target=bun --outfile=/app/migrate-database.js ./scripts/migrate-database.ts
+
+FROM base AS migrator
+COPY --from=migration-build --chown=bun:bun /app/migrate-database.js ./migrate-database.js
+COPY --chown=bun:bun drizzle ./drizzle
+USER bun
+ENTRYPOINT ["bun", "/app/migrate-database.js"]
+
 FROM base AS runner
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=build --chown=bun:bun /app/.next/standalone ./

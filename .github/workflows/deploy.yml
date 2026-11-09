@@ -1,0 +1,68 @@
+name: Validar e publicar DSI Panel
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dsi-panel-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lint, tipagem e testes isolados
+        run: docker build --target checks .
+      - name: Compilar imagem de produção e executor de migrações
+        env:
+          REVISION: ${{ github.sha }}
+        run: |
+          docker build --target runner --label org.opencontainers.image.revision="$REVISION" -t "dsi-panel:git-$REVISION" .
+          docker build --target migrator --label org.opencontainers.image.revision="$REVISION" -t "dsi-panel-migrate:git-$REVISION" .
+      - name: Preparar entrega sem segredos
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+        env:
+          REVISION: ${{ github.sha }}
+        run: |
+          mkdir -p release/docker
+          docker save "dsi-panel:git-$REVISION" "dsi-panel-migrate:git-$REVISION" | gzip -1 > release/images.tar.gz
+          cp compose.yml compose.production.yml release/
+          cp docker/Caddyfile docker/start-proxy.sh release/docker/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+        with:
+          name: dsi-panel-${{ github.sha }}
+          path: release/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    environment: ${{ github.ref_name == 'master' && 'production' || 'development' }}
+    runs-on:
+      [
+        self-hosted,
+        linux,
+        x64,
+        "${{ github.ref_name == 'master' && 'dsi-panel-production' || 'dsi-panel-development' }}",
+      ]
+    timeout-minutes: 20
+    steps:
+      - name: Limpar somente a entrega anterior
+        run: find /var/lib/dsi-panel-delivery -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dsi-panel-${{ github.sha }}
+          path: /var/lib/dsi-panel-delivery
+      - name: Backup, migrações e atualização com verificação de saúde
+        env:
+          REVISION: ${{ github.sha }}
+        run: sudo /usr/local/sbin/dsi-panel-deploy "$REVISION"

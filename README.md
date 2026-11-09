@@ -44,3 +44,5 @@ O quadro compartilhado do DSI está em /kanban. Veja [funcionalidades e permiss�
 Para acessar por HTTPS, veja [certificados, proxy e Keycloak](docs/https.md).
 
 Para produção com PostgreSQL externo e Nginx Proxy Manager, veja [a configuração de produção](docs/producao.md).
+
+Push em `master` publica em produção; `develop` publica no desenvolvimento. Veja [deploy pelo GitHub Actions](docs/github-actions.md).
