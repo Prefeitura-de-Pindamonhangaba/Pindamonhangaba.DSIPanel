@@ -19,7 +19,9 @@ A conexão PostgreSQL deve validar o servidor com TLS. Na instalação municipal
 
 ## Keycloak
 
-O arquivo `docker/compose.keycloak-production.yml` pode ser instalado como `compose.yml` no diretório próprio do Keycloak. O Nginx Proxy Manager encaminha para `10.0.0.193:8082`, publicado com `KC_BIND_ADDRESS=10.0.0.193` e `KC_HTTP_PORT=8082`. Configure `KC_PROXY_TRUSTED_ADDRESSES` para o IP do proxy e encaminhe `X-Forwarded-Proto`, host e porta corretamente. A porta de gerenciamento não é publicada.
+O arquivo `docker/compose.keycloak-production.yml` pode ser instalado como `compose.yml` no diretório próprio do Keycloak. O Nginx Proxy Manager encaminha por HTTPS para `10.0.0.193:8082`, publicado com `KC_BIND_ADDRESS=10.0.0.193` e `KC_HTTP_PORT=8082`, mapeando a porta interna 8443. Configure `KC_PROXY_TRUSTED_ADDRESSES` para o IP do proxy e encaminhe `X-Forwarded-Proto`, host e porta corretamente. A porta de gerenciamento não é publicada.
+
+Para administração interna sem depender do DNS público, configure `KC_HOSTNAME_ADMIN=https://10.0.0.193:8082` e a URL de frontend apenas do realm `master` para esse mesmo endereço. O hostname global e o realm institucional continuam usando o domínio SSO. O certificado interno precisa conter o IP no SAN; mantenha certificado e chave em `tls/server.crt` e `tls/server.key`, com chave legível apenas pelo usuário do Keycloak. A CA fica no servidor; somente sua parte pública é fornecida aos clientes para confiança manual. No proxy, valide o certificado do upstream com essa CA. Essa configuração é separada do certificado público do domínio, que permanece necessário para o acesso externo.
 
 Configure `KC_DB_URL` com JDBC PostgreSQL, `sslmode=verify-full` e `sslrootcert=/certificates/postgres-root.crt`, além de `KC_DB_USERNAME`, `KC_DB_PASSWORD` e as credenciais de bootstrap administrativo em arquivo privado. `KC_HOSTNAME` fixa `https://sso.pindamonhangaba.sp.gov.br`.
 
