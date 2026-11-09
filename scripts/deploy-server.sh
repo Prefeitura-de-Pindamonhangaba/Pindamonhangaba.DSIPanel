@@ -42,12 +42,18 @@ compose=(docker compose --project-name "$PROJECT" --env-file "$ENV_FILE" -f "$re
 if [[ "$DEPLOY_ENVIRONMENT" == development ]]; then
   "${compose[@]}" exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup/database.dump"
 else
-  PGDATABASE=$("${compose[@]}" config --format json | python3 -c 'import sys,json;print(json.load(sys.stdin)["services"]["app"]["environment"]["DATABASE_URL"])')
-  export PGDATABASE
-  docker run --rm --network host -e PGDATABASE -e PGSSLROOTCERT=/certificates/postgres-root.crt \
+  "${compose[@]}" config --format json | python3 -c '
+import sys,json,urllib.parse
+url=urllib.parse.urlsplit(json.load(sys.stdin)["services"]["app"]["environment"]["DATABASE_URL"])
+values={"PGHOST":url.hostname,"PGPORT":str(url.port or 5432),"PGDATABASE":urllib.parse.unquote(url.path.lstrip("/")),"PGUSER":urllib.parse.unquote(url.username or ""),"PGPASSWORD":urllib.parse.unquote(url.password or ""),"PGSSLMODE":"verify-full"}
+for key,value in values.items():
+    if not value or "\n" in value or "\r" in value:raise SystemExit("Conexao de backup invalida.")
+    print(key+"="+value)
+' > "$backup/pg-client.env"
+  docker run --rm --network host --env-file "$backup/pg-client.env" -e PGSSLROOTCERT=/certificates/postgres-root.crt \
     -v "$INSTALL_PATH/certificates:/certificates:ro,z" postgres:17.11-alpine \
     pg_dump -Fc > "$backup/database.dump"
-  unset PGDATABASE
+  rm -f -- "$backup/pg-client.env"
 fi
 [[ -s "$backup/database.dump" ]] || { echo 'Backup vazio; deploy interrompido.'; exit 1; }
 if ! APP_IMAGE="dsi-panel-migrate:git-$revision" "${compose[@]}" run --rm --no-deps --entrypoint bun app /app/migrate-database.js > "$backup/migrations.log" 2>&1; then
