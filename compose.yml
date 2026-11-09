@@ -1,5 +1,6 @@
 services:
   app:
+    image: ${APP_IMAGE:-pindamonhangabadsipanel-app}
     build:
       context: .
       target: runner
