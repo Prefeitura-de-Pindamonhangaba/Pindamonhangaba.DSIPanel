@@ -20,6 +20,16 @@ Os testes de banco usam uma instância isolada e descartável. Para navegador, u
 
 ## Implantar
 
+Em produção, com `DEPLOY_PREPARE_ONLY=1` em `/etc/dsi-panel-deploy.conf`,
+o GitHub Actions valida a revisão, gera o backup e executa as migrações.
+Após o job concluir com sucesso, publique a mesma revisão de `master` pelo
+Coolify. O Nginx Proxy Manager continua encaminhando o domínio para
+`10.0.0.193:3004`. No Coolify, use `compose.production.yml` e defina
+`DSIPANEL_CERTIFICATES_DIR=/opt/PRD/DSIPanel/certificates`.
+
+Com o modo de preparação desabilitado, o script do runner também publica
+a aplicação. O ambiente de desenvolvimento continua usando esse fluxo.
+
 Com .env configurado e após backup do banco:
 
 ```sh

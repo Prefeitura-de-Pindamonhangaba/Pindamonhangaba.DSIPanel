@@ -62,7 +62,7 @@ jobs:
         with:
           name: dsi-panel-${{ github.sha }}
           path: /var/lib/dsi-panel-delivery
-      - name: Backup, migrações e atualização com verificação de saúde
+      - name: Backup, migrações e operação configurada no servidor
         env:
           REVISION: ${{ github.sha }}
         run: sudo /usr/local/sbin/dsi-panel-deploy "$REVISION"

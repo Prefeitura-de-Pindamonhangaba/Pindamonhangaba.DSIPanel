@@ -6,6 +6,11 @@ umask 077
 revision=$1
 # Arquivo root-only, instalado uma vez; não vem do artifact.
 source /etc/dsi-panel-deploy.conf
+prepare_only=${DEPLOY_PREPARE_ONLY:-0}
+if [[ "$prepare_only" != 0 && ( "$prepare_only" != 1 || "$DEPLOY_ENVIRONMENT" != production ) ]]; then
+  echo 'DEPLOY_PREPARE_ONLY=1 é exclusivo de produção.'
+  exit 2
+fi
 exec 9>/var/lock/dsi-panel-deploy.lock
 flock -n 9 || { echo 'Outro deploy esta em andamento.'; exit 1; }
 incoming=/var/lib/dsi-panel-delivery
@@ -29,11 +34,13 @@ install -m 644 "$incoming/docker/Caddyfile" "$release/docker/Caddyfile"
 install -m 644 "$incoming/docker/start-proxy.sh" "$release/docker/start-proxy.sh"
 [[ -e "$release/certificates" ]] || ln -s "$INSTALL_PATH/certificates" "$release/certificates"
 cp "$ENV_FILE" "$backup/environment.backup"
-cp -a "$state/current" "$backup/previous-release" 2>/dev/null || true
-previous_release=$(readlink -f "$state/current")
-container=$(docker ps -q --filter "label=com.docker.compose.project=$PROJECT" --filter label=com.docker.compose.service=app)
-previous_image=$(docker inspect --format '{{.Image}}' "$container")
-printf '%s\n' "$previous_image" > "$backup/previous-image"
+if [[ "$prepare_only" == 0 ]]; then
+  cp -a "$state/current" "$backup/previous-release" 2>/dev/null || true
+  previous_release=$(readlink -f "$state/current")
+  container=$(docker ps -q --filter "label=com.docker.compose.project=$PROJECT" --filter label=com.docker.compose.service=app)
+  previous_image=$(docker inspect --format '{{.Image}}' "$container")
+  printf '%s\n' "$previous_image" > "$backup/previous-image"
+fi
 export APP_IMAGE="dsi-panel:git-$revision"
 compose=(docker compose --project-name "$PROJECT" --env-file "$ENV_FILE" -f "$release/$COMPOSE_FILE")
 "${compose[@]}" config --quiet
@@ -59,6 +66,10 @@ fi
 if ! APP_IMAGE="dsi-panel-migrate:git-$revision" "${compose[@]}" run --rm --no-deps --entrypoint bun app /app/migrate-database.js > "$backup/migrations.log" 2>&1; then
   echo "Migracao recusada ou falhou. Aplicacao anterior preservada. Diagnostico: $backup/migrations.log"
   exit 1
+fi
+if [[ "$prepare_only" == 1 ]]; then
+  echo "Backup e migração concluídos para $revision. Publique essa revisão pelo Coolify."
+  exit 0
 fi
 services=(app)
 [[ "$DEPLOY_ENVIRONMENT" != development ]] || services+=(proxy)
