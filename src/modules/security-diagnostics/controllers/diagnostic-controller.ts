@@ -2,40 +2,32 @@
 
 import { z } from "zod";
 import { requirePageAccess } from "@/modules/auth/controllers/access-controller";
-import { diagnose, targets } from "../services/diagnose";
-
-const input = z.object({
-  url: z.enum([
-    "https://pat.pindamonhangaba.sp.gov.br/",
-    "https://identifica.pindamonhangaba.sp.gov.br/",
-  ]),
-  version: z.string().regex(/^(?:\d{1,4}\.\d{1,4}\.\d{1,4})?$/),
-});
+import { diagnose, parseTarget } from "../services/diagnose";
 
 export async function runDiagnostic(form: FormData) {
   await requirePageAccess();
-  const parsed = input.safeParse({
-    url: form.get("url"),
-    version: form.get("version"),
-  });
-  if (!parsed.success)
+  const input = z.string().trim().min(1).max(2048).safeParse(form.get("url"));
+  let url: URL;
+  try {
+    if (!input.success) throw new Error();
+    url = parseTarget(input.data);
+  } catch {
     return {
       error:
-        "Selecione um endereço autorizado e informe uma versão estável no formato X.Y.Z, se disponível.",
+        "Informe uma URL HTTPS pública com domínio, sem credenciais, parâmetros ou porta personalizada.",
     };
-  const { url, version } = parsed.data;
-  const technology = targets[url];
-  const { advisories } = await import("../services/advisories");
-  const reviews = advisories(technology, version);
+  }
+
   try {
     return {
-      url,
-      technology,
-      version,
-      reviews,
+      url: url.href,
+      timestamp: new Date().toISOString(),
       observation: await diagnose(url),
     };
   } catch {
-    return { url, technology, version, reviews, observation: null };
+    return {
+      error:
+        "Não foi possível consultar o destino por HTTPS. Confira o endereço, o certificado e a disponibilidade pública.",
+    };
   }
 }

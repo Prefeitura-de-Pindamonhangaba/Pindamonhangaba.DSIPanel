@@ -1,7 +1,7 @@
 # Diagnóstico de segurança
 
-O painel consulta por HTTPS a resposta inicial dos endereços autorizados do PAT e do Identifica. A operação usa HEAD com limite de oito segundos e não segue redirecionamentos. O relatório mostra a presença dos cabeçalhos selecionados e os atributos dos cookies recebidos, sem exibir seus valores. Uma resposta de redirecionamento descreve somente a URL inicial.
+Informe a URL HTTPS de um site público autorizado. A consulta usa HEAD, com limite de oito segundos, sem seguir redirecionamentos. Use um domínio com IPv4 público na porta padrão, sem parâmetros, fragmentos ou credenciais. O relatório verifica os cabeçalhos e atributos dos cookies da resposta, sem armazenar seus valores.
 
-Informe a versão estável instalada a partir do inventário para comparar com os avisos selecionados. A comparação cobre séries explicitamente listadas no código. Distribuições com correções retroportadas devem ser verificadas com o fornecedor. Ausência de evidência, presença de cabeçalhos e correção para um aviso específico não certificam a segurança da aplicação.
+Depois de corrigir a configuração, use **Testar novamente**. Alterações no checklist de cabeçalhos aparecem ao repetir a mesma URL. Para exportar o resultado, clique em **Salvar em PDF** e selecione a opção de PDF no diálogo de impressão do navegador.
 
-Para incluir outro destino autorizado, revise a lista fixa no módulo e a validação de entrada. As consultas exigem acesso ao painel.
+Os avisos oficiais de PHP e Next.js servem como referência para verificar o inventário. A consulta HTTP não determina se um CVE está presente ou corrigido.
