@@ -14,7 +14,7 @@ export function PanelShell({
   children,
 }: {
   title: string;
-  active: "home" | "contracts" | "tickets" | "kanban";
+  active: "home" | "contracts" | "tickets" | "kanban" | "security";
   userName: string;
   children: ReactNode;
 }) {
@@ -47,6 +47,12 @@ export function PanelShell({
           {(
             [
               { key: "home", href: "/", icon: "home", label: "Início" },
+              {
+                key: "security",
+                href: "/security-diagnostics",
+                icon: "tools",
+                label: "Diagnóstico de segurança",
+              },
               {
                 key: "kanban",
                 href: "/kanban",
