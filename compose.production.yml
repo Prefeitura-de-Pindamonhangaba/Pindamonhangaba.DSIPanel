@@ -36,7 +36,7 @@ services:
       GLPI_DSI_GROUP_ID: ${GLPI_DSI_GROUP_ID:-}
       GLPI_TIME_ZONE: ${GLPI_TIME_ZONE:-America/Sao_Paulo}
     volumes: &production-certificates
-      - ./certificates:/certificates:ro,z
+      - ${DSIPANEL_CERTIFICATES_DIR:-./certificates}:/certificates:ro,z
     networks:
       proxy:
         aliases: [dsi-panel-production]
